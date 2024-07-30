@@ -1,95 +1,73 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+import React from "react";
+import Head from "next/head";
+import { Paper } from "@mui/material";
+import SearchBar from "@/components/SearchBar";
+import ErrorCard from "@/components/ErrorCard";
+import ResultsTable from "@/components/ResultsTable";
+import { SearchParams } from "@/types/SearchParams";
 
-export default function Home() {
+type Props = {
+  searchParams: SearchParams;
+};
+
+const fetchData = async (
+  include_image = "true",
+  page = "1",
+  per_page = "50",
+  search = ""
+) => {
+  try {
+    let searchParams: Partial<SearchParams> = { include_image, page, per_page };
+    if (search) {
+      searchParams = { ...searchParams, search };
+    }
+
+    const params = new URLSearchParams(searchParams);
+
+    const response = await fetch(
+      `https://exam.api.fotex.net/api/artists?${params.toString()}`
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch artists");
+    }
+
+    return response.json();
+  } catch (error) {
+    return { error: (error as Error).message };
+  }
+};
+
+const HomePage: React.FC<Props> = async ({ searchParams }) => {
+  const { include_image, page, per_page, search } = searchParams;
+
+  const data = await fetchData(include_image, page, per_page, search);
+
   return (
-    <main className={styles.main}>
-      <div className={styles.description}>
-        <p>
-          Get started by editing&nbsp;
-          <code className={styles.code}>app/page.tsx</code>
-        </p>
-        <div>
-          <a
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{" "}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className={styles.vercelLogo}
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
-        </div>
-      </div>
+    <Paper
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        padding: 16,
+        alignItems: "center",
+      }}
+    >
+      <Head>
+        <title>Hungaroton artists</title>
+      </Head>
 
-      <div className={styles.center}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
+      <SearchBar />
+      {data.error && <ErrorCard message={data.error} />}
+
+      {!data.error && (
+        <ResultsTable
+          results={data.data}
+          pageInfo={data.pagination}
+          searchTerm={search || ""}
         />
-      </div>
-
-      <div className={styles.grid}>
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Docs <span>-&gt;</span>
-          </h2>
-          <p>Find in-depth information about Next.js features and API.</p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Learn <span>-&gt;</span>
-          </h2>
-          <p>Learn about Next.js in an interactive course with&nbsp;quizzes!</p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Templates <span>-&gt;</span>
-          </h2>
-          <p>Explore starter templates for Next.js.</p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Deploy <span>-&gt;</span>
-          </h2>
-          <p>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
-    </main>
+      )}
+    </Paper>
   );
-}
+};
+
+export default HomePage;
